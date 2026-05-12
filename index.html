@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <!-- Informazioni tecniche sulla pagina (caratteri e adattamento schermo) -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Micro:bit</title>
+
+    <style>
+        /* Definizione dei colori principali (variabili) */
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --accent: #38bdf8;
+            --text: #f8fafc;
+        }
+
+        /* Stile di base per tutto lo sfondo della pagina */
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* Contenitore principale che tiene tutto al centro */
+        .container {
+            text-align: center;
+            width: 90%;
+            max-width: 600px;
+        }
+
+        /* Griglia per le tre schede di stato (Fermo, Corsa, Laterale) */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        /* Stile delle singole schede (grigie e semi-trasparenti quando inattive) */
+        .mode-card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            opacity: 0.4;
+        }
+
+        /* Stile della scheda quando viene attivata (si illumina) */
+        .mode-card.active {
+            opacity: 1;
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+            transform: scale(1.05);
+        }
+
+        /* Stile delle icone (emoji) dentro le schede */
+        .icon {
+            font-size: 2.5em;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        /* Stile della scritta grande centrale (es. RIPOSO o CORSA) */
+        #main-display {
+            font-size: 4em;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin: 20px 0;
+            color: var(--accent);
+            text-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+        }
+
+        /* Stile del cronometro */
+        #timer {
+            font-size: 2em;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        /* Stile del testo di stato in fondo alla pagina */
+        #status-bar {
+            font-size: 0.9em;
+            color: #94a3b8;
+            margin-top: 20px;
+        }
+
+        /* Stile grafico dei pulsanti */
+        button {
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 10px;
+        }
+
+        /* Effetto quando passi il mouse sopra i pulsanti */
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(56, 189, 248, 0.4);
+        }
+
+        /* Classe per nascondere elementi (come il tasto connetti dopo l uso) */ 
+        .hidden {
+            display: none;
+        }
+
+        /* Stile del testo motivazionale che appare */
+        #motivation-text {
+            margin-top: 20px;
+            font-size: 1.5em;
+            color: var(--accent);
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- Scritta grande di stato -->
+    <div id="main-display">PRONTO?</div>
+
+    <!-- Visualizzazione del tempo -->
+    <div id="timer">Tempo: 0s</div>
+
+    <!-- Le tre icone di attivitÃ  -->
+    <div class="status-grid">
+
+        <div id="card-fermo" class="mode-card">
+            <span class="icon">ð</span>
+            <span>FERMO</span>
+        </div>
+
+        <div id="card-corsa" class="mode-card">
+            <span class="icon">ð</span>
+            <span>CORSA</span>
+        </div>
+
+        <div id="card-laterale" class="mode-card">
+            <span class="icon">âï¸</span>
+            <span>LATERALI</span>
+        </div>
+
+    </div>
+
+    <!-- Pulsanti per interagire -->
+    <button id="btnConnect" onclick="connectBLE()">
+        CONNETTI MICRO:BIT
+    </button>
+
+    <button id="btnDisconnect" onclick="disconnectBLE()">
+        DISCONNETTI
+    </button>
+
+    <button onclick="showMotivation()">
+        MOTIVAZIONI
+    </button>
+
+    <!-- Spazio per messaggi e stato Bluetooth -->
+    <div id="motivation-text"></div>
+
+    <div id="status-bar">
+        Bluetooth non connesso
+    </div>
+
+</div>
+
+<script>
+    // Codici identificativi per comunicare con il Micro:bit via Bluetooth
+    const UART_SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+    const UART_TX_CHARACTERISTIC_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+
+    // Variabili per gestire la connessione, il tempo e la modalitÃ  attuale
+    let deviceGlobal = null;
+    let currentMode = "";
+    let seconds = 0;
+    let timerInterval = null;
+
+    // Funzione per connettere il PC al Micro:bit
+    async function connectBLE() {
+        try {
+            // Cerca un dispositivo Bluetooth chiamato "BBC micro:bit"
+            const device = await navigator.bluetooth.requestDevice({
+                filters: [{ namePrefix: 'BBC micro:bit' }],
+                optionalServices: [UART_SERVICE_UUID]
+            });
+
+            deviceGlobal = device;
+            document.getElementById('status-bar').innerText = "Connessione in corso...";
+
+            // Stabilisce il collegamento
+            const server = await device.gatt.connect();
+            const service = await server.getPrimaryService(UART_SERVICE_UUID);
+            const characteristic = await service.getCharacteristic(UART_TX_CHARACTERISTIC_UUID);
+
+            // Inizia a "ascoltare" i messaggi inviati dal Micro:bit
+            await characteristic.startNotifications();
+
+            document.getElementById('status-bar').innerText = "â Micro:bit Connesso";
+            document.getElementById('btnConnect').classList.add('hidden'); // Nasconde tasto connetti
+
+            // Quando arriva un dato nuovo, lo decodifica e aggiorna la schermata
+            characteristic.addEventListener('characteristicvaluechanged', (event) => {
+                let decoder = new TextDecoder('utf-8');
+                let value = decoder.decode(event.target.value).trim().toLowerCase();
+                updateUI(value);
+            });
+
+        } catch (error) {
+            document.getElementById('status-bar').innerText = "â Errore: " + error.message;
+        }
+    }
+
+    // Funzione per chiudere la connessione Bluetooth
+    function disconnectBLE() {
+        if (deviceGlobal && deviceGlobal.gatt.connected) {
+            deviceGlobal.gatt.disconnect();
+            document.getElementById('status-bar').innerText = "â Micro:bit Disconnesso";
+            document.getElementById('btnConnect').classList.remove('hidden');
+            resetTimer();
+        }
+    }
+
+    // Funzione che fa partire il conteggio dei secondi
+    function startTimer() {
+        clearInterval(timerInterval);
+        seconds = 0;
+        document.getElementById('timer').innerText = "Tempo: 0s";
+        timerInterval = setInterval(() => {
+            seconds++;
+            document.getElementById('timer').innerText = "Tempo: " + seconds + "s";
+        }, 1000);
+    }
+
+    // Funzione per fermare e azzerare il tempo
+    function resetTimer() {
+        clearInterval(timerInterval);
+        seconds = 0;
+        document.getElementById('timer').innerText = "Tempo: 0s";
+    }
+
+    // Funzione che cambia i colori e le scritte in base a cosa fa l utente
+    function updateUI(mode) {
+        // Rimuove l illuminazione da tutte le schede
+        document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
+
+        const display = document.getElementById('main-display');
+
+        // Se l utente cambia attivitÃ , ricomincia il timer
+        if (mode !== currentMode) {
+            currentMode = mode;
+            startTimer();
+        }
+
+        // Se riceve "fermo", illumina la scheda STOP
+        if (mode.includes("fermo")) {
+            display.innerText = "RIPOSO";
+            document.getElementById('card-fermo').classList.add('active');
+        } 
+        // Se riceve "corsa", illumina la scheda CORSA
+        else if (mode.includes("corsa")) {
+            display.innerText = "CORSA";
+            document.getElementById('card-corsa').classList.add('active');
+        } 
+        // Se riceve "laterale", illumina la scheda LATERALI
+        else if (mode.includes("laterale")) {
+            display.innerText = "SINISTRA / DESTRA";
+            document.getElementById('card-laterale').classList.add('active');
+        }
+    }
+
+    // Funzione per mostrare un messaggio di incoraggiamento temporaneo
+    function showMotivation() {
+        const motivation = document.getElementById('motivation-text');
+        motivation.innerText = "Bravo! Continua";
+        setTimeout(() => {
+            motivation.innerText = "";
+        }, 2000);
+    }
+</script>
+
+</body>
+</html>
