@@ -62,7 +62,7 @@
             transform: scale(1.05);
         }
 
-        /* Stile delle icone (emoji rimosse) dentro le schede */
+        /* Stile delle icone (emoji) dentro le schede */
         .icon {
             font-size: 2.5em;
             display: block;
@@ -138,21 +138,21 @@
     <!-- Visualizzazione del tempo -->
     <div id="timer">Tempo: 0s</div>
 
-    <!-- Le tre icone di attivitÃ  -->
+    <!-- Le tre icone di attività -->
     <div class="status-grid">
 
         <div id="card-fermo" class="mode-card">
-            <span class="icon"></span>
+            <span class="icon">🛑</span>
             <span>FERMO</span>
         </div>
 
         <div id="card-corsa" class="mode-card">
-            <span class="icon"></span>
+            <span class="icon">🏃</span>
             <span>CORSA</span>
         </div>
 
         <div id="card-laterale" class="mode-card">
-            <span class="icon"></span>
+            <span class="icon">↔️</span>
             <span>LATERALI</span>
         </div>
 
@@ -185,7 +185,7 @@
     const UART_SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
     const UART_TX_CHARACTERISTIC_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
 
-    // Variabili per gestire la connessione, il tempo e la modalitÃ  attuale
+    // Variabili per gestire la connessione, il tempo e la modalità attuale
     let deviceGlobal = null;
     let currentMode = "";
     let seconds = 0;
@@ -211,7 +211,7 @@
             // Inizia a "ascoltare" i messaggi inviati dal Micro:bit
             await characteristic.startNotifications();
 
-            document.getElementById('status-bar').innerText = "Micro:bit Connesso";
+            document.getElementById('status-bar').innerText = "✅ Micro:bit Connesso";
             document.getElementById('btnConnect').classList.add('hidden'); // Nasconde tasto connetti
 
             // Quando arriva un dato nuovo, lo decodifica e aggiorna la schermata
@@ -222,7 +222,7 @@
             });
 
         } catch (error) {
-            document.getElementById('status-bar').innerText = "Errore: " + error.message;
+            document.getElementById('status-bar').innerText = "❌ Errore: " + error.message;
         }
     }
 
@@ -230,7 +230,7 @@
     function disconnectBLE() {
         if (deviceGlobal && deviceGlobal.gatt.connected) {
             deviceGlobal.gatt.disconnect();
-            document.getElementById('status-bar').innerText = "Micro:bit Disconnesso";
+            document.getElementById('status-bar').innerText = "❌ Micro:bit Disconnesso";
             document.getElementById('btnConnect').classList.remove('hidden');
             resetTimer();
         }
@@ -261,7 +261,7 @@
 
         const display = document.getElementById('main-display');
 
-        // Se l utente cambia attivitÃ , ricomincia il timer
+        // Se l utente cambia attività, ricomincia il timer
         if (mode !== currentMode) {
             currentMode = mode;
             startTimer();
