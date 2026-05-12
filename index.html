@@ -62,7 +62,7 @@
             transform: scale(1.05);
         }
 
-        /* Stile delle icone (emoji) dentro le schede */
+        /* Stile delle icone (emoji rimosse) dentro le schede */
         .icon {
             font-size: 2.5em;
             display: block;
@@ -142,14 +142,17 @@
     <div class="status-grid">
 
         <div id="card-fermo" class="mode-card">
+            <span class="icon"></span>
             <span>FERMO</span>
         </div>
 
         <div id="card-corsa" class="mode-card">
+            <span class="icon"></span>
             <span>CORSA</span>
         </div>
 
         <div id="card-laterale" class="mode-card">
+            <span class="icon"></span>
             <span>LATERALI</span>
         </div>
 
@@ -208,7 +211,7 @@
             // Inizia a "ascoltare" i messaggi inviati dal Micro:bit
             await characteristic.startNotifications();
 
-            document.getElementById('status-bar').innerText = "â Micro:bit Connesso";
+            document.getElementById('status-bar').innerText = "Micro:bit Connesso";
             document.getElementById('btnConnect').classList.add('hidden'); // Nasconde tasto connetti
 
             // Quando arriva un dato nuovo, lo decodifica e aggiorna la schermata
@@ -219,7 +222,7 @@
             });
 
         } catch (error) {
-            document.getElementById('status-bar').innerText = "â Errore: " + error.message;
+            document.getElementById('status-bar').innerText = "Errore: " + error.message;
         }
     }
 
@@ -227,7 +230,7 @@
     function disconnectBLE() {
         if (deviceGlobal && deviceGlobal.gatt.connected) {
             deviceGlobal.gatt.disconnect();
-            document.getElementById('status-bar').innerText = "â Micro:bit Disconnesso";
+            document.getElementById('status-bar').innerText = "Micro:bit Disconnesso";
             document.getElementById('btnConnect').classList.remove('hidden');
             resetTimer();
         }
